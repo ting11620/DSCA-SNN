@@ -72,7 +72,7 @@ def main():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--batch-size", type=int, default=100)
     p.add_argument("--lr", type=float, default=1e-2)
-    p.add_argument("--epochs", type=int, default=33)
+    p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--step-size", type=int, default=20)
     p.add_argument("--lr-gamma", type=float, default=0.5)
     p.add_argument("--save-dir", default="./checkpoints")
@@ -93,7 +93,43 @@ def main():
 
     model = SHDDSCASNN(device=device, branch=a.branch).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=a.lr)
+    base_params = [
+    model.dense_2.dense.weight,
+    model.dense_2.dense.bias,
+    model.dense_1.dense.weight,
+    model.dense_1.dense.bias,
+    ]
+
+    optimizer = torch.optim.Adam([
+    {
+        'params': base_params,
+        'lr': a.lr
+    },
+    {
+        'params': model.dense_2.tau_m,
+        'lr': a.lr * 2
+    },
+    {
+        'params': model.dense_1.tau_m,
+        'lr': a.lr * 2
+    },
+    {
+        'params': model.dense_1.tau_n,
+        'lr': a.lr * 2
+    },
+    {
+        'params': model.dense_1.ahp_gamm,
+        'lr': a.lr * 2
+    },
+    {
+        'params': model.dense_1.ahp_kapp,
+        'lr': a.lr * 2
+    },
+    {
+        'params': model.dense_1.feedback_factor,
+        'lr': a.lr
+    },
+    ])
     scheduler = StepLR(optimizer, step_size=a.step_size, gamma=a.lr_gamma)
 
     save_dir = Path(a.save_dir)
